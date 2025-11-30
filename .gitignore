@@ -1,0 +1,4 @@
+/target
+.direnv
+assets/out
+assets/out/
