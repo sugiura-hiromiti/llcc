@@ -1,11 +1,14 @@
 use std::convert::Infallible;
 use std::fmt::Debug;
+use std::fmt::Display;
 use std::io;
 use std::ops::ControlFlow;
 use std::ops::FromResidual;
 use std::ops::Try;
 use std::panic::Location;
 use std::process::Termination;
+
+#[cfg(test)] use quickcheck::Testable;
 
 pub type LlccB<S,> = B<S, LlccError,>;
 
@@ -16,6 +19,7 @@ pub enum B<S, T,> {
 }
 
 impl<S, T,> FromResidual for B<S, T,> {
+	#[track_caller]
 	fn from_residual(residual: <Self as std::ops::Try>::Residual,) -> Self {
 		match residual {
 			B::X(_i,) => unreachable!(),
@@ -27,6 +31,7 @@ impl<S, T,> FromResidual for B<S, T,> {
 impl<S, T: From<E,>, E: std::error::Error,> FromResidual<Result<Infallible, E,>,>
 	for B<S, T,>
 {
+	#[track_caller]
 	fn from_residual(residual: Result<Infallible, E,>,) -> Self {
 		match residual {
 			Ok(_i,) => unreachable!(),
@@ -51,11 +56,14 @@ impl<S, T,> Try for B<S, T,> {
 	}
 }
 
-impl<S, T,> Termination for B<S, T,> {
+impl<S, T: Display,> Termination for B<S, T,> {
 	fn report(self,) -> std::process::ExitCode {
 		match self {
 			Self::X(_,) => std::process::ExitCode::SUCCESS,
-			Self::Y(_,) => std::process::ExitCode::FAILURE,
+			Self::Y(t,) => {
+				eprintln!("{t:#}");
+				std::process::ExitCode::FAILURE
+			},
 		}
 	}
 }
@@ -63,15 +71,6 @@ impl<S, T,> Termination for B<S, T,> {
 pub trait ReShape<O, C,> {
 	fn reshape(self, ctx: C,) -> O;
 }
-
-// impl<T, E: From<C,>, C,> ReShape<Result<T, E,>, C,> for Option<T,> {
-// 	fn reshape(self, ctx: C,) -> Result<T, E,> {
-// 		match self {
-// 			Self::Some(t,) => Ok(t,),
-// 			Self::None => Err(E::from(ctx,),),
-// 		}
-// 	}
-// }
 
 impl<T, E,> ReShape<B<T, E,>, (),> for Result<T, E,> {
 	fn reshape(self, _ctx: (),) -> B<T, E,> {
@@ -91,18 +90,52 @@ impl<T, E: From<C,>, C,> ReShape<B<T, E,>, C,> for Option<T,> {
 	}
 }
 
-#[derive(thiserror::Error, Debug,)]
+#[cfg(test)]
+impl<S: 'static, T: 'static + Debug,> Testable for B<S, T,> {
+	fn result(&self, _: &mut quickcheck::Gen,) -> quickcheck::TestResult {
+		use quickcheck::TestResult;
+
+		match self {
+			Self::X(_,) => TestResult::from_bool(true,),
+			Self::Y(t,) => TestResult::error(format!("{t:#?}"),),
+		}
+	}
+}
+
+#[derive(Debug,)]
 pub enum LlccError<E = String,>
 where E: Debug
 {
-	#[error("io error at {loc}: {0}", loc= Location::caller())]
-	Io(#[from] io::Error,),
-	#[error("unknown error happen at {loc}: {0}",loc=Location::caller())]
-	Unknowwn(E,),
+	Io { source: io::Error, loc: &'static Location<'static,>, },
+	Unknown(E,),
+}
+
+impl Display for LlccError {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_,>,) -> std::fmt::Result {
+		match self {
+			Self::Io { source, loc, } => {
+				f.write_fmt(format_args!("{source} at: [{}]", loc),)
+			},
+			Self::Unknown(e,) => f.write_fmt(format_args!("{e}"),),
+		}
+	}
+}
+
+impl std::error::Error for LlccError {}
+
+impl From<io::Error,> for LlccError {
+	#[track_caller]
+	fn from(value: io::Error,) -> Self {
+		LlccError::Io { source: value, loc: Location::caller(), }
+	}
 }
 
 impl From<&str,> for LlccError {
+	#[track_caller]
 	fn from(value: &str,) -> Self {
-		Self::Unknowwn(value.to_string(),)
+		Self::Unknown(format!(
+			"unclassified error: {value}\nat: [{}]",
+			Location::caller()
+		),)
 	}
 }

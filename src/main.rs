@@ -1,11 +1,9 @@
 use colored::Colorize;
 use llcc::err::LlccB;
-use llcc::read_src;
-use llcc::run;
+use llcc::front::run;
 
 fn main() -> LlccB<(),> {
-	let src = read_src(None,)?;
-	let status = run(src,)?;
+	let status = run(None::<&str,>,)?;
 	eprintln!("{}", format!("exit status: {}", status).purple());
 
 	LlccB::X((),)

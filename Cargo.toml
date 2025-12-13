@@ -6,4 +6,8 @@ edition = "2024"
 [dependencies]
 anyhow = "*"
 colored = "*"
-thiserror = "*"
+uuid = { version = "*", features = ["v4"] }
+
+[dev-dependencies]
+quickcheck = "*"
+quickcheck_macros = "*"
