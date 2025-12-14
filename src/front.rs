@@ -1,6 +1,6 @@
 use crate::LlccB;
 use crate::asm::run_cmd;
-use crate::asm::simplest_asm_str;
+use crate::asm::asm_str;
 use crate::asm::write_asm;
 use crate::err::B::X;
 use crate::err::ReShape;
@@ -63,7 +63,7 @@ impl Compiler {
 		&self,
 		src: impl Into<String,>,
 	) -> LlccB<impl Into<PathBuf,>,> {
-		let asm = simplest_asm_str(src,);
+		let asm = asm_str(src,);
 		write_asm(asm, self.dest.path(DestKind::Asm,),)?;
 		X(self.dest.path(DestKind::Asm,),)
 	}

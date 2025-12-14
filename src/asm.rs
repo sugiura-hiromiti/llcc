@@ -12,16 +12,16 @@ use std::process::ExitStatus;
 /// syscall number of exit
 const EXIT: i32 = 93;
 
-pub fn simplest_asm_str(src: impl Into<String,>,) -> impl Into<String,> {
-	[
-		".text",
-		".global _start",
-		"_start:",
-		&format!("\tmov x0, #{}", src.into()),
-		&format!("\tmov x8, #{EXIT}"),
-		"\tsvc #0\n",
-	]
-	.join("\n",)
+pub struct Assembler {
+	dest: Dest,
+}
+
+impl Assembler {}
+
+pub fn asm_str(src: impl Into<String,>,) -> impl Into<String,> {
+	let inst_list: &[&[&str]] =
+		&[&[".text", ".global _start", "_start:",], &["\tsvc #0\n",],];
+	""
 }
 
 /// # Return
