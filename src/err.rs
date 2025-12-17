@@ -2,6 +2,7 @@ use std::convert::Infallible;
 use std::fmt::Debug;
 use std::fmt::Display;
 use std::io;
+use std::num;
 use std::ops::ControlFlow;
 use std::ops::FromResidual;
 use std::ops::Try;
@@ -107,6 +108,7 @@ pub enum LlccError<E = String,>
 where E: Debug
 {
 	Io { source: io::Error, loc: &'static Location<'static,>, },
+	Parse { source: num::ParseIntError, loc: &'static Location<'static,>, },
 	Unknown(E,),
 }
 
@@ -114,6 +116,9 @@ impl Display for LlccError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_,>,) -> std::fmt::Result {
 		match self {
 			Self::Io { source, loc, } => {
+				f.write_fmt(format_args!("{source} at: [{}]", loc),)
+			},
+			Self::Parse { source, loc, } => {
 				f.write_fmt(format_args!("{source} at: [{}]", loc),)
 			},
 			Self::Unknown(e,) => f.write_fmt(format_args!("{e}"),),
@@ -127,6 +132,13 @@ impl From<io::Error,> for LlccError {
 	#[track_caller]
 	fn from(value: io::Error,) -> Self {
 		LlccError::Io { source: value, loc: Location::caller(), }
+	}
+}
+
+impl From<num::ParseIntError,> for LlccError {
+	#[track_caller]
+	fn from(value: num::ParseIntError,) -> Self {
+		LlccError::Parse { source: value, loc: Location::caller(), }
 	}
 }
 

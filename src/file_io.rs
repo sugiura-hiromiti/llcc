@@ -21,7 +21,7 @@ impl Default for Dest {
 			},);
 		}
 
-		dbg!(rslt)
+		rslt
 	}
 }
 
@@ -31,8 +31,9 @@ impl Dest {
 	}
 
 	pub fn base_of(&self, kind: DestKind,) -> impl Into<PathBuf,> {
-		let mut assets = PathBuf::from(PRJ_DIR,).join("assets/out",);
+		let mut assets = PathBuf::from(PRJ_DIR,).join("assets",);
 		if kind != DestKind::Src {
+			assets.push("out",);
 			assets.push(self.uuid_part().into(),);
 		}
 
