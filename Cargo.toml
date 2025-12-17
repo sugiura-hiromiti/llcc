@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = "*"
 colored = "*"
+strum = { version = "*", features = ["derive"] }
 uuid = { version = "*", features = ["v4"] }
 
 [dev-dependencies]
