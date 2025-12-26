@@ -8,6 +8,7 @@ anyhow = "*"
 colored = "*"
 strum = { version = "*", features = ["derive"] }
 uuid = { version = "*", features = ["v4"] }
+num = "*"
 
 [dev-dependencies]
 quickcheck = "*"

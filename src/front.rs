@@ -105,7 +105,7 @@ mod tests {
 	use quickcheck_macros::quickcheck;
 
 	#[quickcheck]
-	fn test_run(es: u8,) -> LlccB<(),> {
+	fn test_run_single_number(es: u8,) -> LlccB<(),> {
 		let exit_status = run(Some(es.to_string(),),)?;
 		assert_eq!(exit_status.code(), Some(es as i32));
 		X((),)
