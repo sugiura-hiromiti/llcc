@@ -4,43 +4,22 @@ use crate::asm::run_cmd;
 use crate::asm::write_asm;
 use crate::err::B::X;
 use crate::err::ReShape;
-use crate::file_io::Dest;
-use crate::file_io::DestKind;
+use crate::semantics::Convert;
+use crate::semantics::context::HasIn;
+use crate::semantics::context::HasOut;
+use crate::semantics::purpose::Layer;
+// use crate::file_io::Dest;
+// use crate::file_io::DestKind;
 use crate::stringify_path;
-use std::fs;
-use std::io::Read;
 use std::path::PathBuf;
 use std::process::ExitStatus;
 
-pub fn post_process<S: Into<String,>,>(
-	src: Option<S,>,
-) -> LlccB<(String, Compiler,),> {
-	let compiler = Compiler::default();
-	if let Some(src,) = src {
-		return X((src.into(), compiler,),);
-	}
-
-	let src_path = dbg!(compiler.src_path().into());
-	let mut input = fs::File::open(compiler.src_path().into(),)?;
-	let mut buf = String::new();
-	input.read_to_string(&mut buf,)?;
-	let buf = buf.trim_end().to_string();
-	X((buf, compiler,),)
-}
-
-pub fn run(src: Option<impl Into<String,>,>,) -> LlccB<ExitStatus,> {
-	let (src, compiler,) = post_process(src,)?;
-	let exe_path = compiler.compile(src,)?;
-	exec(exe_path,)
-}
-
 #[derive(Default,)]
-pub struct Compiler {
-	dest: Dest,
-}
+pub struct LlccCompiler {}
 
-impl Compiler {
-	fn src_path(&self,) -> impl Into<PathBuf,> {
+impl LlccCompiler {
+	#[deprecated(note = "入力はオーケストレーション層の管理領域")]
+	pub fn src_path(&self,) -> impl Into<PathBuf,> {
 		self.dest.path(DestKind::Src,)
 	}
 
@@ -97,17 +76,4 @@ pub fn exec(exe_path: impl Into<PathBuf,>,) -> LlccB<ExitStatus,> {
 		exe_path.into().to_str().reshape("failed to stringify exe_path",)?,
 		[],
 	)
-}
-
-#[cfg(test)]
-mod tests {
-	use super::*;
-	use quickcheck_macros::quickcheck;
-
-	#[quickcheck]
-	fn test_run_single_number(es: u8,) -> LlccB<(),> {
-		let exit_status = run(Some(es.to_string(),),)?;
-		assert_eq!(exit_status.code(), Some(es as i32));
-		X((),)
-	}
 }

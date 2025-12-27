@@ -1,6 +1,8 @@
 #![feature(try_trait_v2)]
 #![feature(error_generic_member_access)]
 #![feature(tuple_trait)]
+#![feature(generic_const_items)]
+#![feature(associated_type_defaults)]
 
 use crate::err::B::X;
 // use crate::err::B::Y;
@@ -10,22 +12,24 @@ use std::path::PathBuf;
 
 pub mod asm;
 pub mod err;
-pub mod file_io;
 pub mod front;
-pub mod parse;
+// pub mod parse;
+pub mod orchestrator;
+pub mod register;
+pub mod semantics;
 
-trait ExpressionConverter {
-	type Out: Evaluable;
-	type In: Evaluable;
-
-	fn convert<const REVERSIBLE: bool,>(self,);
-}
-
-trait Evaluable {
-	type Rslt;
-
-	fn eval(&self,) -> LlccB<Self::Rslt,>;
-}
+// trait ExpressionConverter {
+// 	type Out: Evaluable;
+// 	type In: Evaluable;
+//
+// 	fn convert<const REVERSIBLE: bool,>(self,);
+// }
+//
+// trait Evaluable {
+// 	type Rslt;
+//
+// 	fn eval(&self,) -> LlccB<Self::Rslt,>;
+// }
 
 fn stringify_path(path: impl Into<PathBuf,>,) -> LlccB<String,> {
 	let p = path.into();

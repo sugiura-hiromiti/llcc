@@ -1,6 +1,6 @@
 use colored::Colorize;
 use llcc::err::LlccB;
-use llcc::front::run;
+use llcc::orchestrator::run;
 
 fn main() -> LlccB<(),> {
 	let status = run(None::<&str,>,)?;

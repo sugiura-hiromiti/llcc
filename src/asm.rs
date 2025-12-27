@@ -1,11 +1,10 @@
 use crate::err::B::X;
 use crate::err::LlccB;
-use crate::err::LlccError;
 use crate::file_io::Dest;
 use crate::file_io::DestKind;
+use crate::register::*;
 use core::str;
 use std::ffi::OsStr;
-use std::fmt::Display;
 use std::fs;
 use std::io::Write;
 use std::iter::Peekable;
@@ -13,10 +12,15 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::process::ExitStatus;
 use std::str::Chars;
-use std::str::FromStr;
 
 /// syscall number of exit
 const EXIT: u16 = 93;
+
+macro_rules! ret_val {
+	($value:expr) => {
+		Instruction::Mov { target: Register::X8, value: $value, }
+	};
+}
 
 pub struct Assembler {
 	dest: Dest,
@@ -39,7 +43,7 @@ pub fn asm_str(src: impl Into<String,>,) -> LlccB<impl Into<String,>,> {
 	let first_num = parse_number(&mut chars,)?;
 	inst_list.push(Mov {
 		target: X0,
-		value:  RegisterOrImmediate::Immediate(first_num,),
+		value:  RegisterOrImmediate::try_from(first_num,)?,
 	},);
 
 	while let Some(c,) = chars.next() {
@@ -49,7 +53,7 @@ pub fn asm_str(src: impl Into<String,>,) -> LlccB<impl Into<String,>,> {
 				inst_list.push(Add {
 					target: X0,
 					lhs:    X0,
-					rhs:    RegisterOrImmediate::Immediate(num,),
+					rhs:    RegisterOrImmediate::try_from(num,)?,
 				},);
 			},
 			'-' => {
@@ -57,14 +61,14 @@ pub fn asm_str(src: impl Into<String,>,) -> LlccB<impl Into<String,>,> {
 				inst_list.push(Sub {
 					target: X0,
 					lhs:    X0,
-					rhs:    RegisterOrImmediate::Immediate(num,),
+					rhs:    RegisterOrImmediate::try_from(num,)?,
 				},);
 			},
 			a => todo!("unexpected char `{a}`"),
 		}
 	}
 
-	inst_list.push(ret_val!(RegisterOrImmediate::Immediate(EXIT)),);
+	inst_list.push(ret_val!(RegisterOrImmediate::try_from(EXIT as i32)?),);
 	inst_list.push(Svc { syscall: EXIT, },);
 	X(ReadableAsm::from_instructions(inst_list,),)
 }
@@ -92,12 +96,6 @@ enum Instruction<'a,> {
 		lhs:    Register,
 		rhs:    RegisterOrImmediate<12, false,>,
 	},
-}
-
-macro_rules! ret_val {
-	($value:expr) => {
-		Instruction::Mov { target: Register::X8, value: $value, }
-	};
 }
 
 impl<'a,> From<Instruction<'a,>,> for String {
@@ -165,179 +163,6 @@ impl From<SectionKind,> for String {
 		};
 		value.to_string()
 	}
-}
-
-//  TODO: ---
-#[derive(strum::Display,)]
-enum RegisterOrImmediate<const BIT: u8 = 16, const IS_SIGNED: bool = true,> {
-	#[strum(to_string = "{0}")]
-	Register(Register,),
-	#[strum(to_string = "#{0}")]
-	Immediate(Immediate<BIT, IS_SIGNED,>,),
-}
-
-impl TryFrom<Into<String,>,> for RegisterOrImmediate {
-	type Error = LlccError;
-
-	fn try_from(value: Into<String,>,) -> Result<Self, Self::Error,> {
-		Ok(Self::Register(Register::from_str(value.into().as_str(),)?,),)
-	}
-}
-
-impl<I: num::Integer,> TryFrom<I,> for RegisterOrImmediate {
-	type Error = LlccError;
-
-	/// if `value` overflows, max value allowed fot the immediate
-	fn try_from(value: I,) -> Result<Self, Self::Error,> {
-		todo!()
-	}
-}
-
-struct Immediate<const BIT: u8, const IS_SIGNED: bool,>(i32,);
-
-impl<const BIT: u8, const IS_SIGNED: bool,> Display
-	for Immediate<BIT, IS_SIGNED,>
-{
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_,>,) -> std::fmt::Result {
-		let formatted = format_args!("{}", self.0);
-		f.write_fmt(formatted,)
-	}
-}
-
-#[derive(strum::Display, strum::EnumString,)]
-enum Register {
-	#[strum(ascii_case_insensitive)]
-	X31,
-	#[strum(ascii_case_insensitive)]
-	X30,
-	#[strum(ascii_case_insensitive)]
-	X29,
-	#[strum(ascii_case_insensitive)]
-	X28,
-	#[strum(ascii_case_insensitive)]
-	X27,
-	#[strum(ascii_case_insensitive)]
-	X26,
-	#[strum(ascii_case_insensitive)]
-	X25,
-	#[strum(ascii_case_insensitive)]
-	X24,
-	#[strum(ascii_case_insensitive)]
-	X23,
-	#[strum(ascii_case_insensitive)]
-	X22,
-	#[strum(ascii_case_insensitive)]
-	X21,
-	#[strum(ascii_case_insensitive)]
-	X20,
-	#[strum(ascii_case_insensitive)]
-	X19,
-	#[strum(ascii_case_insensitive)]
-	X18,
-	#[strum(ascii_case_insensitive)]
-	X17,
-	#[strum(ascii_case_insensitive)]
-	X16,
-	#[strum(ascii_case_insensitive)]
-	X15,
-	#[strum(ascii_case_insensitive)]
-	X14,
-	#[strum(ascii_case_insensitive)]
-	X13,
-	#[strum(ascii_case_insensitive)]
-	X12,
-	#[strum(ascii_case_insensitive)]
-	X11,
-	#[strum(ascii_case_insensitive)]
-	X10,
-	#[strum(ascii_case_insensitive)]
-	X9,
-	#[strum(ascii_case_insensitive)]
-	X8,
-	#[strum(ascii_case_insensitive)]
-	X7,
-	#[strum(ascii_case_insensitive)]
-	X6,
-	#[strum(ascii_case_insensitive)]
-	X5,
-	#[strum(ascii_case_insensitive)]
-	X4,
-	#[strum(ascii_case_insensitive)]
-	X3,
-	#[strum(ascii_case_insensitive)]
-	X2,
-	#[strum(ascii_case_insensitive)]
-	X1,
-	#[strum(ascii_case_insensitive)]
-	X0,
-	#[strum(ascii_case_insensitive)]
-	W30,
-	#[strum(ascii_case_insensitive)]
-	W29,
-	#[strum(ascii_case_insensitive)]
-	W28,
-	#[strum(ascii_case_insensitive)]
-	W27,
-	#[strum(ascii_case_insensitive)]
-	W26,
-	#[strum(ascii_case_insensitive)]
-	W25,
-	#[strum(ascii_case_insensitive)]
-	W24,
-	#[strum(ascii_case_insensitive)]
-	W23,
-	#[strum(ascii_case_insensitive)]
-	W22,
-	#[strum(ascii_case_insensitive)]
-	W21,
-	#[strum(ascii_case_insensitive)]
-	W20,
-	#[strum(ascii_case_insensitive)]
-	W19,
-	#[strum(ascii_case_insensitive)]
-	W18,
-	#[strum(ascii_case_insensitive)]
-	W17,
-	#[strum(ascii_case_insensitive)]
-	W16,
-	#[strum(ascii_case_insensitive)]
-	W15,
-	#[strum(ascii_case_insensitive)]
-	W14,
-	#[strum(ascii_case_insensitive)]
-	W13,
-	#[strum(ascii_case_insensitive)]
-	W12,
-	#[strum(ascii_case_insensitive)]
-	W11,
-	#[strum(ascii_case_insensitive)]
-	W10,
-	#[strum(ascii_case_insensitive)]
-	W9,
-	#[strum(ascii_case_insensitive)]
-	W8,
-	#[strum(ascii_case_insensitive)]
-	W7,
-	#[strum(ascii_case_insensitive)]
-	W6,
-	#[strum(ascii_case_insensitive)]
-	W5,
-	#[strum(ascii_case_insensitive)]
-	W4,
-	#[strum(ascii_case_insensitive)]
-	W3,
-	#[strum(ascii_case_insensitive)]
-	W2,
-	#[strum(ascii_case_insensitive)]
-	W1,
-	#[strum(ascii_case_insensitive)]
-	W0,
-	#[strum(ascii_case_insensitive)]
-	Sp,
-	#[strum(ascii_case_insensitive)]
-	Xzr,
-	#[strum(ascii_case_insensitive)]
-	Wzr,
 }
 
 fn parse_number(chars: &mut Peekable<Chars,>,) -> LlccB<i32,> {
