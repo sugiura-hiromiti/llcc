@@ -16,8 +16,10 @@ use std::path::PathBuf;
 
 pub mod asm;
 pub mod front;
-// pub mod parse;
+pub mod parser;
 pub mod register;
+pub mod semantic_core;
+pub mod tokenizer;
 
 // trait ExpressionConverter {
 // 	type Out: Evaluable;
