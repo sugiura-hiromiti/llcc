@@ -1,10 +1,9 @@
-use crate::err::B::X;
-use crate::err::Container;
+use llcc_error::B::X;
+use llcc_error::Container;
+use llcc_error::LlccB;
 use std::fs;
 use std::path::PathBuf;
 use uuid::Uuid;
-
-use crate::err::LlccB;
 
 const PRJ_DIR: &str = env!("CARGO_MANIFEST_DIR");
 

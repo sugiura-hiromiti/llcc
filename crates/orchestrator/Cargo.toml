@@ -1,0 +1,15 @@
+[package]
+name = "llcc_orchestrator"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+colored = { workspace = true }
+llcc_core = { workspace = true }
+llcc_error = { workspace = true }
+llcc_semantics = { workspace = true }
+uuid = { workspace = true }
+
+[dev-dependencies]
+quickcheck = { workspace = true }
+quickcheck_macros = { workspace = true }

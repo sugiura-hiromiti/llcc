@@ -1,0 +1,11 @@
+[package]
+name = "llcc_core"
+version = "0.1.0"
+edition = "2024"
+
+# `llcc_orchestrator`に依存してたらおかしいと思え
+[dependencies]
+anyhow = "*"
+llcc_error = { workspace = true }
+llcc_semantics = { workspace = true }
+strum = { workspace = true }

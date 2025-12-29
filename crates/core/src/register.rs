@@ -1,4 +1,4 @@
-use crate::err::LlccError;
+use llcc_error::LlccError;
 use std::fmt::Display;
 use std::str::FromStr;
 

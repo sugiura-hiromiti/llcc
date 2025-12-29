@@ -1,6 +1,6 @@
-use crate::semantics::Ctx;
-#[cfg(test)] use quickcheck::Testable;
-use std::any::type_name;
+#![feature(try_trait_v2)]
+
+use quickcheck::Testable;
 use std::convert::Infallible;
 use std::fmt::Debug;
 use std::fmt::Display;
@@ -128,7 +128,6 @@ impl<T, E: std::fmt::Debug,> Container for B<T, E,> {
 	}
 }
 
-#[cfg(test)]
 impl<S: 'static, T: 'static + Debug,> Testable for B<S, T,> {
 	fn result(&self, _: &mut quickcheck::Gen,) -> quickcheck::TestResult {
 		use quickcheck::TestResult;
@@ -179,15 +178,6 @@ impl LlccError {
 			max_bit,
 			is_signed,
 			loc: Location::caller(),
-		}
-	}
-
-	#[track_caller]
-	pub fn lack_of_ctx<C: Ctx,>() -> Self {
-		LlccError::LackOfContext {
-			context_role: C::ROLE,
-			type_name:    type_name::<C,>(),
-			loc:          Location::caller(),
 		}
 	}
 }

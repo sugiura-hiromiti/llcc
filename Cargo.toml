@@ -1,15 +1,16 @@
-[package]
-name = "llcc"
-version = "0.1.0"
-edition = "2024"
+[workspace]
+members = ["crates/*"]
+resolver = "2"
 
-[dependencies]
-anyhow = "*"
+[workspace.dependencies]
 colored = "*"
-strum = { version = "*", features = ["derive"] }
-uuid = { version = "*", features = ["v4"] }
+llcc_core = { path = "crates/core" }
+llcc_error = { path = "crates/error" }
+llcc_orchestrator = { path = "crates/orchestrator" }
+llcc_proc_macro = { path = "crates/proc_macro" }
+llcc_semantics = { path = "crates/semantics" }
 num = "*"
-
-[dev-dependencies]
 quickcheck = "*"
 quickcheck_macros = "*"
+strum = { version = "*", features = ["derive"] }
+uuid = { version = "*", features = ["v4"] }

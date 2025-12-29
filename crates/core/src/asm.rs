@@ -1,7 +1,5 @@
-use crate::err::B::X;
-use crate::err::LlccB;
-use crate::file_io::Dest;
-use crate::file_io::DestKind;
+use llcc_error::B::X;
+use llcc_error::LlccB;
 use crate::register::*;
 use core::str;
 use std::ffi::OsStr;
@@ -23,7 +21,8 @@ macro_rules! ret_val {
 }
 
 pub struct Assembler {
-	dest: Dest,
+	//  TODO: this is orchestration layer
+	// dest: Dest,
 }
 
 impl Assembler {}
@@ -206,13 +205,4 @@ where
 {
 	let status = Command::new(cmd.into(),).args(args,).status()?;
 	X(status,)
-}
-
-pub fn clear_out(dest: &Dest,) -> LlccB<(),> {
-	let out = dest.path(DestKind::OutDir,).into();
-	if fs::exists(&out,)? {
-		fs::remove_dir_all(out,)?;
-	}
-
-	X((),)
 }

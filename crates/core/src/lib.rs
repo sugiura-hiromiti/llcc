@@ -3,20 +3,19 @@
 #![feature(tuple_trait)]
 #![feature(generic_const_items)]
 #![feature(associated_type_defaults)]
+// #![feature(const_trait_impl)]
+#![feature(const_type_name)]
 
-use crate::err::B::X;
+use llcc_error::B::X;
 // use crate::err::B::Y;
-use crate::err::LlccB;
-use crate::err::ReShape;
+use llcc_error::LlccB;
+use llcc_error::ReShape;
 use std::path::PathBuf;
 
 pub mod asm;
-pub mod err;
 pub mod front;
 // pub mod parse;
-pub mod orchestrator;
 pub mod register;
-pub mod semantics;
 
 // trait ExpressionConverter {
 // 	type Out: Evaluable;
