@@ -1,4 +1,5 @@
 #![feature(try_trait_v2)]
+#![feature(try_trait_v2_residual)]
 
 use quickcheck::Testable;
 use std::convert::Infallible;
@@ -7,6 +8,7 @@ use std::fmt::Display;
 use std::io;
 use std::ops::ControlFlow;
 use std::ops::FromResidual;
+use std::ops::Residual;
 use std::ops::Try;
 use std::panic::Location;
 use std::process::Termination;
@@ -55,6 +57,10 @@ impl<S, T,> Try for B<S, T,> {
 			Self::Y(t,) => ControlFlow::Break(B::Y(t,),),
 		}
 	}
+}
+
+impl<S, T,> Residual<S,> for B<Infallible, T,> {
+	type TryType = B<S, T,>;
 }
 
 impl<S, T: Display,> Termination for B<S, T,> {
@@ -164,6 +170,10 @@ pub enum LlccError {
 		type_name:    &'static str,
 		loc:          &'static Location<'static,>,
 	},
+	LayerHasNoWorker {
+		msg: String,
+		loc: &'static Location<'static,>,
+	},
 	Unknown {
 		msg: String,
 		loc: &'static Location<'static,>,
@@ -205,6 +215,9 @@ impl Display for LlccError {
 					"context: `{type_name}` for {context_role} should take \
 					 enough info. at: [{loc}]"
 				),),
+			Self::LayerHasNoWorker { msg, loc, } => {
+				f.write_fmt(format_args!("{msg} at: [{loc}]"),)
+			},
 			Self::Unknown { msg, loc, } => {
 				f.write_fmt(format_args!("{msg} at: [{loc}]"),)
 			},

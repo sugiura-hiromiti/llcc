@@ -3,8 +3,10 @@
 #![feature(tuple_trait)]
 #![feature(generic_const_items)]
 #![feature(associated_type_defaults)]
-// #![feature(const_trait_impl)]
 #![feature(const_type_name)]
+#![feature(lazy_type_alias)]
+#![feature(type_alias_impl_trait)]
+#![feature(iterator_try_collect)]
 
 use llcc_error::B::X;
 // use crate::err::B::Y;

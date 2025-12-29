@@ -1,5 +1,10 @@
+use llcc_core::front::TokenStream;
+use llcc_core::front::Tokenizer;
+use llcc_core::front::TokenizerCtx;
 use llcc_error::B::X;
 use llcc_error::LlccB;
+use llcc_semantics::purpose::Layer;
+use llcc_semantics::purpose::State;
 use std::fs;
 use std::io::Read as _;
 use std::path::Path;
@@ -28,7 +33,12 @@ impl<'a,> Src<'a,> {
 }
 
 pub fn run(src: Src<'_,>,) -> LlccB<ExitStatus,> {
-	let _code = src.get_code()?;
+	let code = src.get_code()?;
+	let mut tokenizer = Tokenizer::from_state(TokenStream::new(vec![],),);
+	// *tokenizer.ctx_mut() = TokenizerCtx::new(code,);
+
+	tokenizer.state_mut().update(&TokenizerCtx::new(code,),)?;
+
 	todo!()
 	// let exe_path = compiler.compile(src,)?;
 	// exec(exe_path,)

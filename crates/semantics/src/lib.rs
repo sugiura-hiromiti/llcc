@@ -1,4 +1,9 @@
 #![feature(try_trait_v2)]
+#![feature(unboxed_closures)]
+#![feature(tuple_trait)]
+#![feature(fn_traits)]
+#![feature(associated_type_defaults)]
+#![feature(impl_trait_in_assoc_type)]
 
 use llcc_error::LlccError;
 use std::any::type_name;
@@ -13,7 +18,7 @@ pub mod purpose;
 // 	fn convert(&self,);
 // }
 
-pub trait Ctx {
+pub trait Ctx: Default {
 	/// description of context role
 	const ROLE: &'static str;
 }
