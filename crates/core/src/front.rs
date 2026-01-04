@@ -10,3 +10,7 @@ pub fn exec(exe_path: impl Into<PathBuf,>,) -> LlccB<ExitStatus,> {
 		[],
 	)
 }
+
+pub trait SrcRef {
+	fn source_code(&self,) -> String;
+}

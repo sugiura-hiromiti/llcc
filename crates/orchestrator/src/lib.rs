@@ -37,7 +37,7 @@ pub fn run(src: Src<'_,>,) -> LlccB<ExitStatus,> {
 	let mut tokenizer = Tokenizer::from_state(TokenStream::new(vec![],),);
 	// *tokenizer.ctx_mut() = TokenizerCtx::new(code,);
 
-	tokenizer.state_mut().update(&TokenizerCtx::new(code,),)?;
+	tokenizer.state_mut().inclement(&TokenizerCtx::new(code,),)?;
 
 	todo!()
 	// let exe_path = compiler.compile(src,)?;

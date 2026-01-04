@@ -14,7 +14,6 @@ impl Default for SemanticCore {
 
 impl Layer for SemanticCore {
 	type Ctx = Self;
-	type Next = Self;
 	type State = Self;
 	type Worker = Self;
 
@@ -38,21 +37,12 @@ impl Layer for SemanticCore {
 	fn ctx_mut(&mut self,) -> &mut Self::Ctx {
 		todo!()
 	}
-
-	fn set_worker(&mut self, worker: Self::Worker,) -> &mut Self {
-		let _ = worker;
-		todo!()
-	}
-
-	fn next(&self,) -> LlccB<Self::Next,> {
-		todo!()
-	}
 }
 
 impl State for SemanticCore {
 	type Ctx = ();
 
-	fn update(&mut self, ctx: &Self::Ctx,) -> LlccB<(),> {
+	fn inclement(&mut self, ctx: &Self::Ctx,) -> LlccB<(),> {
 		let _ = ctx;
 		todo!()
 	}

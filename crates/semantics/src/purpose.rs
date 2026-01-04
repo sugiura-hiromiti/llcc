@@ -1,20 +1,16 @@
-use llcc_error::B::X;
+use crate::Ctx;
 use llcc_error::LlccB;
 use llcc_error::LlccError;
-use llcc_error::ReShape;
-
-use crate::Ctx;
 use std::marker::PhantomData;
 use std::panic::Location;
 
-pub trait State {
-	type Ctx;
-	fn update(&mut self, ctx: &Self::Ctx,) -> LlccB<(),>;
-}
+pub trait State {}
 
-// pub trait DefState<BuildTarget: State,> {
-// 	fn into_state(self,) -> BuildTarget;
-// }
+pub trait InclementalState {
+	//  TODO: ctxをctxとdeltaに分割した方が良い?
+	type Ctx;
+	fn inclement(&mut self, ctx: &Self::Ctx,) -> LlccB<(),>;
+}
 
 pub trait Worker<I, Ctx,> {
 	type Output;
@@ -22,47 +18,61 @@ pub trait Worker<I, Ctx,> {
 	fn work(&self, input: I, ctx: &Ctx,) -> LlccB<Self::Output,>;
 }
 
-// impl<I, Ctx, O, T: for<'a> Fn(I, &'a Ctx,) -> LlccB<O,>,> Worker<I, Ctx,>
-// 	for T
-// {
-// 	type Output = O;
-//
-// 	fn work(&self, input: I, ctx: &Ctx,) -> LlccB<Self::Output,> {
-// 		self.call((input, ctx,),)
-// 	}
-// }
+impl<I, Ctx, F, O,> Worker<I, Ctx,> for F
+where F: Fn(I, &Ctx,) -> LlccB<O,>
+{
+	type Output = O;
 
-// impl<I, Ctx, W: Worker<I, Ctx,>,> Worker<I, Ctx,> for Box<W,> {
-// 	type Output = W::Output;
-//
-// 	fn work(&self, input: I, ctx: &Ctx,) -> LlccB<Self::Output,> {
-// 		self.as_ref().work(input, ctx,)
-// 	}
-// }
+	fn work(&self, input: I, ctx: &Ctx,) -> LlccB<Self::Output,> {
+		self.call((input, ctx,),)
+	}
+}
 
-// pub trait DefWorker<BuildTarget: Worker,> {
-// 	fn into_worker(self,) -> BuildTarget;
-// }
+pub trait Lowering:
+	for<'a> Worker<&'a <Self::Upper as Layer>::State, <Self::Upper as Layer>::Ctx,>
+{
+	type Upper: Layer;
+	fn lower<'a,>(
+		&self,
+		upper: &'a Self::Upper,
+	) -> LlccB<
+		<Self as Worker<
+			&'a <Self::Upper as Layer>::State,
+			<Self::Upper as Layer>::Ctx,
+		>>::Output,
+	> {
+		self.work(upper.state(), upper.ctx(),)
+	}
+}
 
 pub trait Layer {
 	type State: State;
-	type Next: Layer;
 	type Ctx: Ctx;
-	type Worker: for<'a> Worker<
-			&'a Self::State,
-			Self::Ctx,
-			Output = <Self::Next as Layer>::State,
-		>;
+	type Worker: for<'a> Worker<&'a Self::State, Self::Ctx,>;
 
 	fn from_state(state: Self::State,) -> Self;
 	fn state(&self,) -> &Self::State;
 	fn state_mut(&mut self,) -> &mut Self::State;
 	fn ctx(&self,) -> &Self::Ctx;
 	fn ctx_mut(&mut self,) -> &mut Self::Ctx;
-	fn set_worker(&mut self, worker: Self::Worker,) -> &mut Self;
 
-	// fn update(&mut self,) -> LlccB<&mut Self,>;
-	fn next(&self,) -> LlccB<Self::Next,>;
+	fn apply_work(
+		&self,
+		worker: Self::Worker,
+	) -> LlccB<<Self::Worker as Worker<&Self::State, Self::Ctx,>>::Output,> {
+		worker.work(self.state(), self.ctx(),)
+	}
+}
+
+pub trait CanonicalForm: State {
+	type Ctx: Ctx;
+	fn verify_canonical(&self,) -> LlccB<(),>;
+}
+
+/// Internal Representationと言われる物
+pub trait FrontEnd: Layer
+where <Self as Layer>::State: CanonicalForm
+{
 }
 
 pub trait LayerErr {
@@ -77,38 +87,29 @@ pub trait LayerErr {
 
 impl LayerErr for LlccError {}
 
-pub struct CoreLayer<S, C, W, N,>
+pub struct CoreLayer<S, C, W,>
 where
 	S: State,
 	C: Ctx,
-	W: for<'a> Worker<&'a S, C, Output = N::State,>,
-	N: Layer,
+	W: for<'a> Worker<&'a S, C,>,
 {
-	state:  S,
-	ctx:    C,
-	worker: Option<W,>,
-	_next:  PhantomData<N,>,
+	state:   S,
+	ctx:     C,
+	_worker: PhantomData<W,>,
 }
 
-impl<S, C, W, N,> Layer for CoreLayer<S, C, W, N,>
+impl<S, C, W,> Layer for CoreLayer<S, C, W,>
 where
 	S: State,
 	C: Ctx,
-	W: for<'a> Worker<&'a S, C, Output = N::State,>,
-	N: Layer,
+	W: for<'a> Worker<&'a S, C,>,
 {
 	type Ctx = C;
-	type Next = N;
 	type State = S;
 	type Worker = W;
 
 	fn from_state(state: Self::State,) -> Self {
-		Self {
-			state,
-			ctx: Self::Ctx::default(),
-			worker: None,
-			_next: PhantomData::<Self::Next,>,
-		}
+		Self { state, ctx: Self::Ctx::default(), _worker: PhantomData::<W,>, }
 	}
 
 	fn state(&self,) -> &Self::State {
@@ -125,26 +126,5 @@ where
 
 	fn ctx_mut(&mut self,) -> &mut Self::Ctx {
 		&mut self.ctx
-	}
-
-	fn set_worker(&mut self, worker: Self::Worker,) -> &mut Self {
-		self.worker = Some(worker,);
-		self
-	}
-
-	// fn update(&mut self,) -> LlccB<&mut Self,> {
-	// 	self.state_mut().update(self.ctx(),)?;
-	// 	X(self,)
-	// }
-
-	fn next(&self,) -> LlccB<Self::Next,> {
-		let next_state = self
-			.worker
-			.as_ref()
-			.reshape(
-				LlccError::layer_has_no_worker("CoreLayer has no worker",),
-			)?
-			.work(&self.state, &self.ctx,)?;
-		X(Self::Next::from_state(next_state,),)
 	}
 }

@@ -18,6 +18,8 @@ pub mod purpose;
 // 	fn convert(&self,);
 // }
 
+/// Ctxは与えられる物限定
+/// それ以外は状態と見るべき
 pub trait Ctx: Default {
 	/// description of context role
 	const ROLE: &'static str;

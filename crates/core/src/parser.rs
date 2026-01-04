@@ -5,7 +5,7 @@ use llcc_semantics::purpose::CoreLayer;
 use llcc_semantics::purpose::State;
 use llcc_semantics::purpose::Worker;
 
-pub type Parser = CoreLayer<Ast, ParserCtx, ParserWorker, SemanticCore,>;
+pub type Parser = CoreLayer<Ast, ParserCtx, ParserWorker,>;
 
 pub struct Ast {
 	root: Node,
@@ -14,7 +14,7 @@ pub struct Ast {
 impl State for Ast {
 	type Ctx = ParserCtx;
 
-	fn update(&mut self, ctx: &Self::Ctx,) -> LlccB<(),> {
+	fn inclement(&mut self, ctx: &Self::Ctx,) -> LlccB<(),> {
 		todo!()
 	}
 }

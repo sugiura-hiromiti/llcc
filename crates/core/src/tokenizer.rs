@@ -1,5 +1,5 @@
+use crate::front::SrcRef;
 use crate::parser::Ast;
-use crate::parser::Parser;
 use llcc_error::B::X;
 use llcc_error::LlccB;
 use llcc_semantics::Ctx;
@@ -7,8 +7,12 @@ use llcc_semantics::purpose::CoreLayer;
 use llcc_semantics::purpose::State;
 use llcc_semantics::purpose::Worker;
 
-pub type Tokenizer =
-	CoreLayer<TokenStream, TokenizerCtx, TokenizerWorker, Parser,>;
+// pub type Tokenizer = CoreLayer<TokenStream, TokenizerCtx, TokenizerWorker,>;
+pub type Tokenizer<O,> = CoreLayer<
+	TokenStream,
+	TokenizerCtx,
+	fn(&TokenStream, &TokenizerCtx,) -> LlccB<O,>,
+>;
 
 pub struct TokenStream(Vec<Token,>,);
 
@@ -16,41 +20,43 @@ impl TokenStream {
 	pub fn new(inner: Vec<Token,>,) -> Self {
 		Self(inner,)
 	}
+
+	pub fn into_stream(src: impl SrcRef,) {}
 }
 
 impl State for TokenStream {
-	type Ctx = TokenizerCtx;
-
-	fn update(&mut self, ctx: &Self::Ctx,) -> LlccB<(),> {
-		self.0 = vec![];
-		let mut src_chars = ctx.src.chars().peekable();
-
-		while let Some(c,) = src_chars.next() {
-			match c {
-				a if a.is_whitespace() => {
-					continue;
-				},
-				'+' => {
-					self.0.push(Token::Sign(SignToken::Plus,),);
-				},
-				'-' => {
-					self.0.push(Token::Sign(SignToken::Minus,),);
-				},
-				a if a.is_numeric() => {
-					let mut s = String::from(a,);
-					while src_chars.peek().is_some_and(|c| c.is_numeric(),) {
-						s.push(src_chars.next().expect("must be some",),);
-					}
-					let n: i32 = s.parse()?;
-					self.0.push(Token::Num(OpaqueSemanticToken::Determined(
-						NumToken::Integer(n,),
-					),),);
-				},
-				_ => todo!(),
-			}
-		}
-		X((),)
-	}
+	// type Ctx = TokenizerCtx;
+	//
+	// fn inclement(&mut self, ctx: &Self::Ctx,) -> LlccB<(),> {
+	// 	self.0 = vec![];
+	// 	let mut src_chars = ctx.src.chars().peekable();
+	//
+	// 	while let Some(c,) = src_chars.next() {
+	// 		match c {
+	// 			a if a.is_whitespace() => {
+	// 				continue;
+	// 			},
+	// 			'+' => {
+	// 				self.0.push(Token::Sign(SignToken::Plus,),);
+	// 			},
+	// 			'-' => {
+	// 				self.0.push(Token::Sign(SignToken::Minus,),);
+	// 			},
+	// 			a if a.is_numeric() => {
+	// 				let mut s = String::from(a,);
+	// 				while src_chars.peek().is_some_and(|c| c.is_numeric(),) {
+	// 					s.push(src_chars.next().expect("must be some",),);
+	// 				}
+	// 				let n: i32 = s.parse()?;
+	// 				self.0.push(Token::Num(OpaqueSemanticToken::Determined(
+	// 					NumToken::Integer(n,),
+	// 				),),);
+	// 			},
+	// 			_ => todo!(),
+	// 		}
+	// 	}
+	// 	X((),)
+	// }
 }
 
 #[derive(Clone, Debug, PartialEq,)]
@@ -123,7 +129,7 @@ mod tests {
 		let tokens_list: Vec<_,> = exprs
 			.iter()
 			.map(|s| {
-				tokenstream.update(&TokenizerCtx::new(*s,),)?;
+				tokenstream.inclement(&TokenizerCtx::new(*s,),)?;
 				let inner = tokenstream.0.clone();
 				X(inner,)
 			},)
