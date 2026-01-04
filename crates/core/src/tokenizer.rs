@@ -46,15 +46,6 @@ impl TokenStream {
 				'+' | '-' | '*' | '/' | '(' | ')' => {
 					tokens.push(Token::Sign(SignToken::from_char(c,)?,),);
 				},
-				// '-' => {
-				// 	tokens.push(Token::Sign(SignToken::Minus,),);
-				// },
-				// '(' => {
-				// 	tokens.push(Token::Sign(SignToken::LeftParen,),);
-				// },
-				// ')' => {
-				// 	tokens.push(Token::Sign(SignToken::RightParen,),);
-				// },
 				a if a.is_numeric() => {
 					let mut s = String::from(a,);
 					while src_chars.peek().is_some_and(|c| c.is_numeric(),) {

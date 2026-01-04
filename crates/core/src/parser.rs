@@ -1,11 +1,14 @@
 use crate::semantic_core::SemanticCore;
+use crate::tokenizer::Tokenizer;
 use llcc_error::LlccB;
 use llcc_semantics::Ctx;
 use llcc_semantics::purpose::CoreLayer;
+use llcc_semantics::purpose::Lowering;
 use llcc_semantics::purpose::State;
 use llcc_semantics::purpose::Worker;
 
-pub type Parser = CoreLayer<Ast, ParserCtx, ParserWorker,>;
+pub type Parser<O,> =
+	CoreLayer<Ast, ParserCtx, fn(&Ast, &ParserCtx,) -> LlccB<O,>,>;
 
 pub struct Ast {
 	root: Node,
@@ -13,8 +16,27 @@ pub struct Ast {
 
 impl State for Ast {}
 
-pub enum Node {
-	Dummy(String,),
+pub struct Node {
+	val: Value,
+	l:   Option<Box<Node,>,>,
+	r:   Option<Box<Node,>,>,
+}
+
+pub enum Value {
+	Op(OpValue,),
+	Literal(LiteralValue,),
+}
+
+pub enum OpValue {
+	Plus,
+	Minus,
+	Mul,
+	Div,
+}
+
+pub enum LiteralValue {
+	Integer(i32,),
+	Decimal(f64,),
 }
 
 #[derive(Default,)]
@@ -24,14 +46,8 @@ impl Ctx for ParserCtx {
 	const ROLE: &'static str = "parser ctx";
 }
 
-pub struct ParserWorker;
+pub struct FromTokenizer;
 
-impl Worker<&Ast, ParserCtx,> for ParserWorker {
-	type Output = SemanticCore;
-
-	fn work(&self, input: &Ast, ctx: &ParserCtx,) -> LlccB<Self::Output,> {
-		let _ = input;
-		let _ = ctx;
-		todo!()
-	}
+impl Lowering for FromTokenizer {
+	type Upper = Tokenizer<impl Worker,>;
 }
