@@ -1,7 +1,10 @@
 use crate::front::SrcRef;
 use crate::parser::Ast;
 use llcc_error::B::X;
+use llcc_error::B::Y;
 use llcc_error::LlccB;
+use llcc_error::LlccError;
+use llcc_error::TokenError;
 use llcc_semantics::Ctx;
 use llcc_semantics::purpose::CoreLayer;
 use llcc_semantics::purpose::State;
@@ -14,50 +17,63 @@ pub type Tokenizer<O,> = CoreLayer<
 	fn(&TokenStream, &TokenizerCtx,) -> LlccB<O,>,
 >;
 
+#[derive(Debug,)]
 pub struct TokenStream(Vec<Token,>,);
+
+impl PartialEq<Vec<Token,>,> for TokenStream {
+	fn eq(&self, other: &Vec<Token,>,) -> bool {
+		&self.0 == other
+	}
+}
 
 impl TokenStream {
 	pub fn new(inner: Vec<Token,>,) -> Self {
 		Self(inner,)
 	}
 
-	pub fn into_stream(src: impl SrcRef,) {}
+	//  NOTE: 分割の責務に集中する
+	//  Tokenの生成はTokenにまかせる
+	pub fn into_stream(src: impl SrcRef,) -> LlccB<Self,> {
+		let src = src.source_code()?;
+		let mut src_chars = src.chars().peekable();
+
+		let mut tokens = vec![];
+		while let Some(c,) = src_chars.next() {
+			match c {
+				a if a.is_whitespace() => {
+					continue;
+				},
+				'+' | '-' | '*' | '/' | '(' | ')' => {
+					tokens.push(Token::Sign(SignToken::from_char(c,)?,),);
+				},
+				// '-' => {
+				// 	tokens.push(Token::Sign(SignToken::Minus,),);
+				// },
+				// '(' => {
+				// 	tokens.push(Token::Sign(SignToken::LeftParen,),);
+				// },
+				// ')' => {
+				// 	tokens.push(Token::Sign(SignToken::RightParen,),);
+				// },
+				a if a.is_numeric() => {
+					let mut s = String::from(a,);
+					while src_chars.peek().is_some_and(|c| c.is_numeric(),) {
+						s.push(src_chars.next().expect("must be some",),);
+					}
+					let n: i32 = s.parse()?;
+					tokens.push(Token::Num(OpaqueSemanticToken::Determined(
+						NumToken::Integer(n,),
+					),),);
+				},
+				_ => todo!(),
+			}
+		}
+
+		X(Self(tokens,),)
+	}
 }
 
-impl State for TokenStream {
-	// type Ctx = TokenizerCtx;
-	//
-	// fn inclement(&mut self, ctx: &Self::Ctx,) -> LlccB<(),> {
-	// 	self.0 = vec![];
-	// 	let mut src_chars = ctx.src.chars().peekable();
-	//
-	// 	while let Some(c,) = src_chars.next() {
-	// 		match c {
-	// 			a if a.is_whitespace() => {
-	// 				continue;
-	// 			},
-	// 			'+' => {
-	// 				self.0.push(Token::Sign(SignToken::Plus,),);
-	// 			},
-	// 			'-' => {
-	// 				self.0.push(Token::Sign(SignToken::Minus,),);
-	// 			},
-	// 			a if a.is_numeric() => {
-	// 				let mut s = String::from(a,);
-	// 				while src_chars.peek().is_some_and(|c| c.is_numeric(),) {
-	// 					s.push(src_chars.next().expect("must be some",),);
-	// 				}
-	// 				let n: i32 = s.parse()?;
-	// 				self.0.push(Token::Num(OpaqueSemanticToken::Determined(
-	// 					NumToken::Integer(n,),
-	// 				),),);
-	// 			},
-	// 			_ => todo!(),
-	// 		}
-	// 	}
-	// 	X((),)
-	// }
-}
+impl State for TokenStream {}
 
 #[derive(Clone, Debug, PartialEq,)]
 pub enum Token {
@@ -78,6 +94,25 @@ pub enum OpaqueSemanticToken<T, S,> {
 pub enum SignToken {
 	Plus,
 	Minus,
+	Mul,
+	Div,
+	LeftParen,
+	RightParen,
+}
+
+impl SignToken {
+	fn from_char(c: char,) -> LlccB<Self,> {
+		let token = match c {
+			'+' => Self::Plus,
+			'-' => Self::Minus,
+			'*' => Self::Mul,
+			'/' => Self::Div,
+			'(' => Self::LeftParen,
+			')' => Self::RightParen,
+			_ => return Y(LlccError::from(TokenError::UnexpectedToken,),),
+		};
+		X(token,)
+	}
 }
 
 #[derive(Clone, Debug, PartialEq,)]
@@ -123,16 +158,11 @@ mod tests {
 
 	#[test]
 	fn test_tokenstream_update() -> LlccB<(),> {
-		let mut tokenstream = TokenStream::new(vec![],);
 		let exprs = ["1+1", "1-1", "1 + 1", "1 + 2 - 3+5 +4 -5+7",];
 
 		let tokens_list: Vec<_,> = exprs
 			.iter()
-			.map(|s| {
-				tokenstream.inclement(&TokenizerCtx::new(*s,),)?;
-				let inner = tokenstream.0.clone();
-				X(inner,)
-			},)
+			.map(|s| TokenStream::into_stream(s.to_string(),),)
 			.try_collect()?;
 
 		assert_eq!(

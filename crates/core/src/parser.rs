@@ -11,13 +11,7 @@ pub struct Ast {
 	root: Node,
 }
 
-impl State for Ast {
-	type Ctx = ParserCtx;
-
-	fn inclement(&mut self, ctx: &Self::Ctx,) -> LlccB<(),> {
-		todo!()
-	}
-}
+impl State for Ast {}
 
 pub enum Node {
 	Dummy(String,),

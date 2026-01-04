@@ -1,3 +1,4 @@
+use llcc_core::front::SrcRef;
 use llcc_core::tokenizer::TokenStream;
 use llcc_core::tokenizer::Tokenizer;
 use llcc_core::tokenizer::TokenizerCtx;
@@ -17,27 +18,25 @@ pub enum Src<'a,> {
 	Path(&'a Path,),
 }
 
-impl<'a,> Src<'a,> {
-	fn get_code(self,) -> LlccB<String,> {
-		let code = match self {
+impl<'a,> SrcRef for Src<'a,> {
+	fn source_code(self,) -> LlccB<String,> {
+		let src = match self {
 			Self::Str(s,) => s.to_string(),
 			Self::Path(path,) => {
-				let mut input = fs::File::open(path,)?;
+				let mut file = fs::File::open(path,)?;
 				let mut buf = String::new();
-				input.read_to_string(&mut buf,)?;
+				file.read_to_string(&mut buf,)?;
 				buf
 			},
 		};
-		X(code,)
+
+		X(src,)
 	}
 }
 
 pub fn run(src: Src<'_,>,) -> LlccB<ExitStatus,> {
-	let code = src.get_code()?;
-	let mut tokenizer = Tokenizer::from_state(TokenStream::new(vec![],),);
+	let _code = src.source_code()?;
 	// *tokenizer.ctx_mut() = TokenizerCtx::new(code,);
-
-	tokenizer.state_mut().inclement(&TokenizerCtx::new(code,),)?;
 
 	todo!()
 	// let exe_path = compiler.compile(src,)?;

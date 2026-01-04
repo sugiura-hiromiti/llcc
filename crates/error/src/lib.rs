@@ -174,10 +174,19 @@ pub enum LlccError {
 		msg: String,
 		loc: &'static Location<'static,>,
 	},
+	Token {
+		source: TokenError,
+		loc:    &'static Location<'static,>,
+	},
 	Unknown {
 		msg: String,
 		loc: &'static Location<'static,>,
 	},
+}
+
+#[derive(Debug,)]
+pub enum TokenError {
+	UnexpectedToken,
 }
 
 impl LlccError {
@@ -218,6 +227,9 @@ impl Display for LlccError {
 			Self::LayerHasNoWorker { msg, loc, } => {
 				f.write_fmt(format_args!("{msg} at: [{loc}]"),)
 			},
+			Self::Token { source, loc, } => {
+				f.write_fmt(format_args!("{source:?} at [{loc}]"),)
+			},
 			Self::Unknown { msg, loc, } => {
 				f.write_fmt(format_args!("{msg} at: [{loc}]"),)
 			},
@@ -252,5 +264,12 @@ impl From<&str,> for LlccError {
 	#[track_caller]
 	fn from(value: &str,) -> Self {
 		Self::Unknown { msg: value.to_string(), loc: Location::caller(), }
+	}
+}
+
+impl From<TokenError,> for LlccError {
+	#[track_caller]
+	fn from(value: TokenError,) -> Self {
+		Self::Token { source: value, loc: Location::caller(), }
 	}
 }

@@ -39,14 +39,7 @@ impl Layer for SemanticCore {
 	}
 }
 
-impl State for SemanticCore {
-	type Ctx = ();
-
-	fn inclement(&mut self, ctx: &Self::Ctx,) -> LlccB<(),> {
-		let _ = ctx;
-		todo!()
-	}
-}
+impl State for SemanticCore {}
 
 impl Ctx for SemanticCore {
 	const ROLE: &'static str = "semantic core";

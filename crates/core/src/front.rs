@@ -1,5 +1,6 @@
 use crate::LlccB;
 use crate::asm::run_cmd;
+use llcc_error::B::X;
 use llcc_error::ReShape;
 use std::path::PathBuf;
 use std::process::ExitStatus;
@@ -12,5 +13,11 @@ pub fn exec(exe_path: impl Into<PathBuf,>,) -> LlccB<ExitStatus,> {
 }
 
 pub trait SrcRef {
-	fn source_code(&self,) -> String;
+	fn source_code(self,) -> LlccB<String,>;
+}
+
+impl<S: Into<String,>,> SrcRef for S {
+	fn source_code(self,) -> LlccB<String,> {
+		X(self.into(),)
+	}
 }
