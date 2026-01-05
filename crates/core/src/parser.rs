@@ -88,7 +88,10 @@ fn primary(ts: &TokenStream, ctx: &mut TokenizerCtx,) -> LlccB<Box<Node,>,> {
 		expect!(&Token::Sign(SignToken::RightParen,), ts, ctx,)?;
 		return X(node,);
 	}
-	todo!()
+	let token = expect!(&Token::Num(_), ts, ctx,)?;
+	let token = token.expect("number token should be present",);
+	let val = Value::from_token(token,)?;
+	X(Box::new(Node::node(val, None, None,),),)
 }
 
 pub enum Value {
@@ -183,6 +186,7 @@ impl<'a, O,> Worker<&'a TokenStream, TokenizerCtx,> for FromTokenizer<O,> {
 mod tests {
 	use super::*;
 	use crate::tokenizer::OpaqueSemanticToken;
+	use crate::tokenizer::TokenStream;
 
 	#[test]
 	fn test_value_from_sign_token_ops() -> LlccB<(),> {
@@ -250,6 +254,93 @@ mod tests {
 			let msg = format!("{err}");
 			assert!(msg.contains("UnexpectedToken"));
 		}
+		X((),)
+	}
+
+	#[test]
+	fn test_primary_number() -> LlccB<(),> {
+		let ts = TokenStream::into_stream("42",)?;
+		let mut ctx = TokenizerCtx::new();
+		let node = primary(&ts, &mut ctx,)?;
+		assert!(matches!(
+			node.val,
+			Value::Literal(LiteralValue::Integer(42))
+		));
+		assert_eq!(ctx.idx(), 1);
+		X((),)
+	}
+
+	#[test]
+	fn test_primary_paren_expr() -> LlccB<(),> {
+		let ts = TokenStream::into_stream("(1+2)",)?;
+		let mut ctx = TokenizerCtx::new();
+		let node = primary(&ts, &mut ctx,)?;
+		assert!(matches!(node.val, Value::Op(OpValue::Plus)));
+		let left = node.l.as_ref().expect("left");
+		let right = node.r.as_ref().expect("right");
+		assert!(matches!(
+			left.val,
+			Value::Literal(LiteralValue::Integer(1))
+		));
+		assert!(matches!(
+			right.val,
+			Value::Literal(LiteralValue::Integer(2))
+		));
+		assert_eq!(ctx.idx(), 5);
+		X((),)
+	}
+
+	#[test]
+	fn test_mul_left_associative() -> LlccB<(),> {
+		let ts = TokenStream::into_stream("2*3/4",)?;
+		let mut ctx = TokenizerCtx::new();
+		let node = mul(&ts, &mut ctx,)?;
+		assert!(matches!(node.val, Value::Op(OpValue::Div)));
+		let left = node.l.as_ref().expect("left");
+		let right = node.r.as_ref().expect("right");
+		assert!(matches!(
+			right.val,
+			Value::Literal(LiteralValue::Integer(4))
+		));
+		assert!(matches!(left.val, Value::Op(OpValue::Mul)));
+		let left_left = left.l.as_ref().expect("left left");
+		let left_right = left.r.as_ref().expect("left right");
+		assert!(matches!(
+			left_left.val,
+			Value::Literal(LiteralValue::Integer(2))
+		));
+		assert!(matches!(
+			left_right.val,
+			Value::Literal(LiteralValue::Integer(3))
+		));
+		assert_eq!(ctx.idx(), 5);
+		X((),)
+	}
+
+	#[test]
+	fn test_expr_left_associative() -> LlccB<(),> {
+		let ts = TokenStream::into_stream("1+2-3",)?;
+		let mut ctx = TokenizerCtx::new();
+		let node = expr(&ts, &mut ctx,)?;
+		assert!(matches!(node.val, Value::Op(OpValue::Minus)));
+		let left = node.l.as_ref().expect("left");
+		let right = node.r.as_ref().expect("right");
+		assert!(matches!(
+			right.val,
+			Value::Literal(LiteralValue::Integer(3))
+		));
+		assert!(matches!(left.val, Value::Op(OpValue::Plus)));
+		let left_left = left.l.as_ref().expect("left left");
+		let left_right = left.r.as_ref().expect("left right");
+		assert!(matches!(
+			left_left.val,
+			Value::Literal(LiteralValue::Integer(1))
+		));
+		assert!(matches!(
+			left_right.val,
+			Value::Literal(LiteralValue::Integer(2))
+		));
+		assert_eq!(ctx.idx(), 5);
 		X((),)
 	}
 }

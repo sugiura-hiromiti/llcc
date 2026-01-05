@@ -1,7 +1,7 @@
-use llcc_error::B::X;
-use llcc_error::LlccB;
 use crate::register::*;
 use core::str;
+use llcc_error::B::X;
+use llcc_error::LlccB;
 use std::ffi::OsStr;
 use std::fs;
 use std::io::Write;
@@ -26,6 +26,8 @@ pub struct Assembler {
 }
 
 impl Assembler {}
+
+pub struct InstList(Vec<Instruction,>,);
 
 pub fn asm_str(src: impl Into<String,>,) -> LlccB<impl Into<String,>,> {
 	use Instruction::*;
