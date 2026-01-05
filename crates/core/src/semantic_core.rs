@@ -17,11 +17,6 @@ impl Layer for SemanticCore {
 	type State = Self;
 	type Worker = Self;
 
-	fn from_state(state: Self::State,) -> Self {
-		let _ = state;
-		todo!()
-	}
-
 	fn state(&self,) -> &Self::State {
 		todo!()
 	}

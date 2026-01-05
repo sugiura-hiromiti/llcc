@@ -1,8 +1,6 @@
 use crate::Ctx;
 use llcc_error::LlccB;
-use llcc_error::LlccError;
 use std::marker::PhantomData;
-use std::panic::Location;
 
 pub trait State {}
 
@@ -50,7 +48,6 @@ pub trait Layer {
 	type Ctx: Ctx;
 	type Worker: for<'a> Worker<&'a Self::State, Self::Ctx,>;
 
-	fn from_state(state: Self::State,) -> Self;
 	fn state(&self,) -> &Self::State;
 	fn state_mut(&mut self,) -> &mut Self::State;
 	fn ctx(&self,) -> &Self::Ctx;
@@ -75,18 +72,6 @@ where <Self as Layer>::State: CanonicalForm
 {
 }
 
-pub trait LayerErr {
-	#[track_caller]
-	fn layer_has_no_worker(msg: &str,) -> LlccError {
-		LlccError::LayerHasNoWorker {
-			msg: msg.to_string(),
-			loc: Location::caller(),
-		}
-	}
-}
-
-impl LayerErr for LlccError {}
-
 pub struct CoreLayer<S, C, W,>
 where
 	S: State,
@@ -108,10 +93,6 @@ where
 	type State = S;
 	type Worker = W;
 
-	fn from_state(state: Self::State,) -> Self {
-		Self { state, ctx: Self::Ctx::default(), _worker: PhantomData::<W,>, }
-	}
-
 	fn state(&self,) -> &Self::State {
 		&self.state
 	}
@@ -126,5 +107,16 @@ where
 
 	fn ctx_mut(&mut self,) -> &mut Self::Ctx {
 		&mut self.ctx
+	}
+}
+
+impl<S, C, W,> CoreLayer<S, C, W,>
+where
+	S: State,
+	C: Ctx,
+	W: for<'a> Worker<&'a S, C,>,
+{
+	pub fn new(state: S, ctx: C,) -> Self {
+		Self { state, ctx, _worker: PhantomData::<W,>, }
 	}
 }

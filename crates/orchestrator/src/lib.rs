@@ -1,11 +1,6 @@
 use llcc_core::front::SrcRef;
-use llcc_core::tokenizer::TokenStream;
-use llcc_core::tokenizer::Tokenizer;
-use llcc_core::tokenizer::TokenizerCtx;
 use llcc_error::B::X;
 use llcc_error::LlccB;
-use llcc_semantics::purpose::Layer;
-use llcc_semantics::purpose::State;
 use std::fs;
 use std::io::Read as _;
 use std::path::Path;

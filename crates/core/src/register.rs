@@ -1,3 +1,4 @@
+use llcc_error::ImmTypeError;
 use llcc_error::LlccError;
 use std::fmt::Display;
 use std::str::FromStr;
@@ -57,7 +58,7 @@ impl<const BIT: u8, const IS_SIGNED: bool,> TryFrom<i32,>
 		};
 
 		if undesired_sign || overflowing {
-			Err(LlccError::mismatch_imm(value, BIT, IS_SIGNED,),)
+			Err(LlccError::from(ImmTypeError::new(value, BIT, IS_SIGNED,),),)
 		} else {
 			Ok(Self(value,),)
 		}

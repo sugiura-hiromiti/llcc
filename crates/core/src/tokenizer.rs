@@ -9,6 +9,7 @@ use llcc_semantics::Ctx;
 use llcc_semantics::purpose::CoreLayer;
 use llcc_semantics::purpose::State;
 use llcc_semantics::purpose::Worker;
+use std::ops::Deref;
 
 // pub type Tokenizer = CoreLayer<TokenStream, TokenizerCtx, TokenizerWorker,>;
 pub type Tokenizer<O,> = CoreLayer<
@@ -19,6 +20,14 @@ pub type Tokenizer<O,> = CoreLayer<
 
 #[derive(Debug,)]
 pub struct TokenStream(Vec<Token,>,);
+
+impl Deref for TokenStream {
+	type Target = Vec<Token,>;
+
+	fn deref(&self,) -> &Self::Target {
+		&self.0
+	}
+}
 
 impl PartialEq<Vec<Token,>,> for TokenStream {
 	fn eq(&self, other: &Vec<Token,>,) -> bool {
@@ -114,12 +123,20 @@ pub enum NumToken {
 
 #[derive(Default,)]
 pub struct TokenizerCtx {
-	src: String,
+	idx: usize,
 }
 
 impl TokenizerCtx {
-	pub fn new(src: impl Into<String,>,) -> Self {
-		Self { src: src.into(), }
+	pub fn new() -> Self {
+		Self { idx: 0, }
+	}
+
+	pub fn idx(&self,) -> usize {
+		self.idx
+	}
+
+	pub fn idx_mut(&mut self,) -> &mut usize {
+		&mut self.idx
 	}
 }
 
@@ -143,13 +160,69 @@ impl Worker<&TokenStream, TokenizerCtx,> for TokenizerWorker {
 	}
 }
 
+// pub fn assume(
+// 	token: &Token, ts: &TokenStream, ctx: &mut TokenizerCtx,
+// ) -> bool {
+// 	let idx = ctx.idx();
+// 	match ts.get(idx,) {
+// 		Some(t,) if t == token => {
+// 			*ctx.idx_mut() = idx + 1;
+// 			true
+// 		},
+// 		_ => false,
+// 	}
+// }
+
+// pub fn expect(
+// 	token: &Token,
+// 	ts: &TokenStream,
+// 	ctx: &mut TokenizerCtx,
+// ) -> LlccB<(),> {
+// 	// if assume(token, ts, ctx,) {
+// 	// 	X((),)
+// 	// } else {
+// 	// 	Y(LlccError::from(TokenError::UnexpectedToken,),)
+// 	// }
+// 	let idx = ctx.idx();
+// 	match ts.get(idx) {
+// 	    Some(t) if t==token =>
+// 	}
+// }
+
+#[macro_export]
+macro_rules! expect {
+	($token:pat, $ts:expr, $ctx:expr,) => {{
+		let idx = $ctx.idx();
+		match $ts.get(idx,) {
+			a @ Some($token,) => {
+				*$ctx.idx_mut() = idx + 1;
+				X(a,)
+			},
+			_a => Y(LlccError::from(TokenError::UnexpectedToken,),),
+		}
+	}};
+}
+
+#[macro_export]
+macro_rules! assume {
+	($token:pat, $ts:expr, $ctx:expr,) => {
+		matches!(expect!($token, $ts, $ctx,), X(_))
+	};
+}
+
 #[cfg(test)]
 mod tests {
 	use super::*;
 
 	#[test]
 	fn test_tokenstream_update() -> LlccB<(),> {
-		let exprs = ["1+1", "1-1", "1 + 1", "1 + 2 - 3+5 +4 -5+7",];
+		let exprs = [
+			"1+1",
+			"1-1",
+			"1 + 1",
+			"1 + 2 - 3+5 +4 -5+7",
+			"98 / 7 - 6",
+		];
 
 		let tokens_list: Vec<_,> = exprs
 			.iter()
@@ -224,6 +297,58 @@ mod tests {
 				))),
 			],
 		);
+		assert_eq!(
+			tokens_list[4],
+			vec![
+				Token::Num(OpaqueSemanticToken::Determined(NumToken::Integer(
+					98
+				))),
+				Token::Sign(SignToken::Div),
+				Token::Num(OpaqueSemanticToken::Determined(NumToken::Integer(
+					7
+				))),
+				Token::Sign(SignToken::Minus),
+				Token::Num(OpaqueSemanticToken::Determined(NumToken::Integer(
+					6
+				))),
+			],
+		);
+		X((),)
+	}
+
+	#[test]
+	fn test_tokenstream_parens_and_mul_div() -> LlccB<(),> {
+		let ts = TokenStream::into_stream("(12+3)*4/2",)?;
+		assert_eq!(
+			ts,
+			vec![
+				Token::Sign(SignToken::LeftParen),
+				Token::Num(OpaqueSemanticToken::Determined(NumToken::Integer(
+					12
+				))),
+				Token::Sign(SignToken::Plus),
+				Token::Num(OpaqueSemanticToken::Determined(NumToken::Integer(
+					3
+				))),
+				Token::Sign(SignToken::RightParen),
+				Token::Sign(SignToken::Mul),
+				Token::Num(OpaqueSemanticToken::Determined(NumToken::Integer(
+					4
+				))),
+				Token::Sign(SignToken::Div),
+				Token::Num(OpaqueSemanticToken::Determined(NumToken::Integer(
+					2
+				))),
+			],
+		);
+		X((),)
+	}
+
+	#[test]
+	fn test_tokenizer_new() -> LlccB<(),> {
+		let ts = TokenStream::into_stream("1+1",)?;
+		let ctx = TokenizerCtx::new();
+		let _tokenizer = Tokenizer::<(),>::new(ts, ctx,);
 		X((),)
 	}
 }

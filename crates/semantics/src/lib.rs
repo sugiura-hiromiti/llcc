@@ -5,10 +5,6 @@
 #![feature(associated_type_defaults)]
 #![feature(impl_trait_in_assoc_type)]
 
-use llcc_error::LlccError;
-use std::any::type_name;
-use std::panic::Location;
-
 pub mod ability;
 pub mod context;
 pub mod purpose;
@@ -23,19 +19,4 @@ pub mod purpose;
 pub trait Ctx: Default {
 	/// description of context role
 	const ROLE: &'static str;
-}
-
-pub trait CtxErr {
-	fn lack_of_ctx<C: Ctx,>() -> Self;
-}
-
-impl CtxErr for LlccError {
-	#[track_caller]
-	fn lack_of_ctx<C: Ctx,>() -> Self {
-		LlccError::LackOfContext {
-			context_role: C::ROLE,
-			type_name:    type_name::<C,>(),
-			loc:          Location::caller(),
-		}
-	}
 }

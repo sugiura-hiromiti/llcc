@@ -1,12 +1,12 @@
 #![feature(try_trait_v2)]
 #![feature(error_generic_member_access)]
 #![feature(tuple_trait)]
-#![feature(generic_const_items)]
+// #![feature(generic_const_items)]
 #![feature(associated_type_defaults)]
 #![feature(const_type_name)]
-#![feature(lazy_type_alias)]
 #![feature(type_alias_impl_trait)]
 #![feature(iterator_try_collect)]
+#![feature(impl_trait_in_assoc_type)]
 
 use llcc_error::B::X;
 // use crate::err::B::Y;

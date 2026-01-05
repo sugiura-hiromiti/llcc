@@ -12,6 +12,7 @@ use std::ops::Residual;
 use std::ops::Try;
 use std::panic::Location;
 use std::process::Termination;
+use strum::Display;
 
 pub type LlccB<S,> = B<S, LlccError,>;
 
@@ -146,42 +147,21 @@ impl<S: 'static, T: 'static + Debug,> Testable for B<S, T,> {
 }
 
 #[derive(Debug,)]
-pub enum LlccError {
-	Io {
-		source: io::Error,
-		loc:    &'static Location<'static,>,
-	},
-	ParseSrcInt {
-		source: std::num::ParseIntError,
-		loc:    &'static Location<'static,>,
-	},
-	Parse {
-		source: strum::ParseError,
-		loc:    &'static Location<'static,>,
-	},
-	MismatchImmediateType {
-		origin:    i32,
-		max_bit:   u8,
-		is_signed: bool,
-		loc:       &'static Location<'static,>,
-	},
-	LackOfContext {
-		context_role: &'static str,
-		type_name:    &'static str,
-		loc:          &'static Location<'static,>,
-	},
-	LayerHasNoWorker {
-		msg: String,
-		loc: &'static Location<'static,>,
-	},
-	Token {
-		source: TokenError,
-		loc:    &'static Location<'static,>,
-	},
-	Unknown {
-		msg: String,
-		loc: &'static Location<'static,>,
-	},
+pub struct LlccError {
+	kind: LlccErrorKind,
+	loc:  &'static Location<'static,>,
+}
+
+#[derive(Debug,)]
+enum LlccErrorKind {
+	Io(io::Error,),
+	ParseSrcInt(std::num::ParseIntError,),
+	Parse(strum::ParseError,),
+	ImmediateType(ImmTypeError,),
+	Context(ContextError,),
+	Layer(LayerError,),
+	Token(TokenError,),
+	Unknown(String,),
 }
 
 #[derive(Debug,)]
@@ -189,49 +169,57 @@ pub enum TokenError {
 	UnexpectedToken,
 }
 
-impl LlccError {
-	#[track_caller]
-	pub fn mismatch_imm(origin: i32, max_bit: u8, is_signed: bool,) -> Self {
-		LlccError::MismatchImmediateType {
-			origin,
-			max_bit,
-			is_signed,
-			loc: Location::caller(),
-		}
+#[derive(Debug,)]
+pub struct ImmTypeError {
+	origin:    i32,
+	max_bit:   u8,
+	is_signed: bool,
+}
+
+impl ImmTypeError {
+	pub fn new(origin: i32, max_bit: u8, is_signed: bool,) -> Self {
+		Self { origin, max_bit, is_signed, }
 	}
+}
+
+#[derive(Debug,)]
+pub struct ContextError {
+	context_role: &'static str,
+	type_name:    &'static str,
+}
+
+#[derive(Debug,)]
+pub enum LayerError {
+	LayerHasNoWorker,
 }
 
 impl Display for LlccError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_,>,) -> std::fmt::Result {
-		match self {
-			Self::Io { source, loc, } => {
-				f.write_fmt(format_args!("{source} at: [{loc}]"),)
+		let loc = self.loc;
+		match &self.kind {
+			LlccErrorKind::Io(error,) => {
+				f.write_fmt(format_args!("{error:?}\nat: [{loc}]"),)
 			},
-			Self::ParseSrcInt { source, loc, } => {
-				f.write_fmt(format_args!("{source} at: [{loc}]"),)
+			LlccErrorKind::ParseSrcInt(error,) => {
+				f.write_fmt(format_args!("{error:?}\nat: [{loc}]"),)
 			},
-			Self::Parse { source, loc, } => {
-				f.write_fmt(format_args!("{source} at: [{loc}]",),)
+			LlccErrorKind::Parse(error,) => {
+				f.write_fmt(format_args!("{error:?}\nat: [{loc}]"),)
 			},
-			Self::MismatchImmediateType {
-				origin, max_bit, is_signed, loc,
-			} => f.write_fmt(format_args!(
-				"{origin} is not of type {max_bit} bit {} int. at: [{loc}]",
-				if *is_signed { "signed" } else { "unsigned" }
-			),),
-			Self::LackOfContext { context_role, type_name, loc, } => f
-				.write_fmt(format_args!(
-					"context: `{type_name}` for {context_role} should take \
-					 enough info. at: [{loc}]"
-				),),
-			Self::LayerHasNoWorker { msg, loc, } => {
-				f.write_fmt(format_args!("{msg} at: [{loc}]"),)
+			LlccErrorKind::ImmediateType(error,) => {
+				f.write_fmt(format_args!("{error:?}\nat: [{loc}]"),)
 			},
-			Self::Token { source, loc, } => {
-				f.write_fmt(format_args!("{source:?} at [{loc}]"),)
+			LlccErrorKind::Context(error,) => {
+				f.write_fmt(format_args!("{error:?}\nat: [{loc}]"),)
 			},
-			Self::Unknown { msg, loc, } => {
-				f.write_fmt(format_args!("{msg} at: [{loc}]"),)
+			LlccErrorKind::Layer(error,) => {
+				f.write_fmt(format_args!("{error:?}\nat: [{loc}]"),)
+			},
+			LlccErrorKind::Token(error,) => {
+				f.write_fmt(format_args!("{error:?}\nat: [{loc}]"),)
+			},
+			LlccErrorKind::Unknown(error,) => {
+				f.write_fmt(format_args!("{error:?}\nat: [{loc}]"),)
 			},
 		}
 	}
@@ -242,34 +230,57 @@ impl std::error::Error for LlccError {}
 impl From<io::Error,> for LlccError {
 	#[track_caller]
 	fn from(value: io::Error,) -> Self {
-		LlccError::Io { source: value, loc: Location::caller(), }
+		Self { kind: LlccErrorKind::Io(value,), loc: Location::caller(), }
 	}
 }
 
 impl From<std::num::ParseIntError,> for LlccError {
 	#[track_caller]
 	fn from(value: std::num::ParseIntError,) -> Self {
-		LlccError::ParseSrcInt { source: value, loc: Location::caller(), }
+		Self {
+			kind: LlccErrorKind::ParseSrcInt(value,),
+			loc:  Location::caller(),
+		}
 	}
 }
 
 impl From<strum::ParseError,> for LlccError {
 	#[track_caller]
 	fn from(value: strum::ParseError,) -> Self {
-		LlccError::Parse { source: value, loc: Location::caller(), }
+		Self { kind: LlccErrorKind::Parse(value,), loc: Location::caller(), }
 	}
 }
 
 impl From<&str,> for LlccError {
 	#[track_caller]
 	fn from(value: &str,) -> Self {
-		Self::Unknown { msg: value.to_string(), loc: Location::caller(), }
+		Self {
+			kind: LlccErrorKind::Unknown(value.to_string(),),
+			loc:  Location::caller(),
+		}
 	}
 }
 
 impl From<TokenError,> for LlccError {
 	#[track_caller]
 	fn from(value: TokenError,) -> Self {
-		Self::Token { source: value, loc: Location::caller(), }
+		Self { kind: LlccErrorKind::Token(value,), loc: Location::caller(), }
+	}
+}
+
+impl From<LayerError,> for LlccError {
+	#[track_caller]
+	fn from(value: LayerError,) -> Self {
+		Self { kind: LlccErrorKind::Layer(value,), loc: Location::caller(), }
+	}
+}
+
+impl From<ImmTypeError,> for LlccError {
+	#[track_caller]
+	fn from(value: ImmTypeError,) -> Self {
+		Self {
+			kind: LlccErrorKind::ImmediateType(value,),
+			loc:  Location::caller(),
+		}
 	}
 }
